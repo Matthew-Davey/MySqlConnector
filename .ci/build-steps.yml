@@ -59,13 +59,13 @@ steps:
     targetPath: 'tests/SideBySide/bin/Release/netcoreapp2.1/publish'
 
 - task: DotNetCoreCLI@2
-  displayName: 'Publish SideBySide (3.0)'
+  displayName: 'Publish SideBySide (5.0)'
   inputs:
     command: 'publish'
-    arguments: '-c Release -f netcoreapp3.0 tests/SideBySide/SideBySide.csproj'
+    arguments: '-c Release -f netcoreapp5.0 tests/SideBySide/SideBySide.csproj'
     publishWebProjects: false
     zipAfterPublish: false
 - task: PublishPipelineArtifact@0
   inputs:
-    artifactName: 'SideBySide-netcoreapp3.0-$(Agent.OS)'
-    targetPath: 'tests/SideBySide/bin/Release/netcoreapp3.0/publish'
+    artifactName: 'SideBySide-netcoreapp5.0-$(Agent.OS)'
+    targetPath: 'tests/SideBySide/bin/Release/netcoreapp5.0/publish'
