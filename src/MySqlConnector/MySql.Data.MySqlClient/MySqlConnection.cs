@@ -35,7 +35,7 @@ namespace MySql.Data.MySqlClient
 		public new MySqlTransaction BeginTransaction(IsolationLevel isolationLevel) => (MySqlTransaction) base.BeginTransaction(isolationLevel);
 		protected override DbTransaction BeginDbTransaction(IsolationLevel isolationLevel) => BeginDbTransactionAsync(isolationLevel, IOBehavior.Synchronous, CancellationToken.None).GetAwaiter().GetResult();
 
-#if !NETSTANDARD2_1 && !NETCOREAPP3_0
+#if NET45 || NET461 || NET471 || NETSTANDARD1_3 || NETSTANDARD2_0 || NETCOREAPP2_1
 		public ValueTask<MySqlTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default) => BeginDbTransactionAsync(IsolationLevel.Unspecified, AsyncIOBehavior, cancellationToken);
 		public ValueTask<MySqlTransaction> BeginTransactionAsync(IsolationLevel isolationLevel, CancellationToken cancellationToken = default) => BeginDbTransactionAsync(isolationLevel, AsyncIOBehavior, cancellationToken);
 #else
@@ -225,7 +225,7 @@ namespace MySql.Data.MySqlClient
 #endif
 
 		public override void Close() => CloseAsync(changeState: true, IOBehavior.Synchronous).GetAwaiter().GetResult();
-#if !NETSTANDARD2_1 && !NETCOREAPP3_0
+#if NET45 || NET461 || NET471 || NETSTANDARD1_3 || NETSTANDARD2_0 || NETCOREAPP2_1
 		public Task CloseAsync() => CloseAsync(changeState: true, SimpleAsyncIOBehavior);
 #else
 		public override Task CloseAsync() => CloseAsync(changeState: true, SimpleAsyncIOBehavior);
@@ -233,7 +233,7 @@ namespace MySql.Data.MySqlClient
 		internal Task CloseAsync(IOBehavior ioBehavior) => CloseAsync(changeState: true, ioBehavior);
 
 		public override void ChangeDatabase(string databaseName) => ChangeDatabaseAsync(IOBehavior.Synchronous, databaseName, CancellationToken.None).GetAwaiter().GetResult();
-#if !NETSTANDARD2_1 && !NETCOREAPP3_0
+#if NET45 || NET461 || NET471 || NETSTANDARD1_3 || NETSTANDARD2_0 || NETCOREAPP2_1
 		public Task ChangeDatabaseAsync(string databaseName, CancellationToken cancellationToken = default) => ChangeDatabaseAsync(AsyncIOBehavior, databaseName, cancellationToken);
 #else
 		public override Task ChangeDatabaseAsync(string databaseName, CancellationToken cancellationToken = default) => ChangeDatabaseAsync(AsyncIOBehavior, databaseName, cancellationToken);
@@ -431,7 +431,7 @@ namespace MySql.Data.MySqlClient
 			}
 		}
 
-#if !NETSTANDARD2_1 && !NETCOREAPP3_0
+#if NET45 || NET461 || NET471 || NETSTANDARD1_3 || NETSTANDARD2_0 || NETCOREAPP2_1
 		public async Task DisposeAsync()
 #else
 		public override async ValueTask DisposeAsync()

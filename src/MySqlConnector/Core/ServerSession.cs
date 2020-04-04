@@ -987,7 +987,7 @@ namespace MySqlConnector.Core
 #else
 			if (Log.IsInfoEnabled())
 				Log.Info("Session{0} connecting to NamedPipe '{1}' on Server '{2}'", m_logArguments[0], cs.PipeName, cs.HostNames![0]);
-			var namedPipeStream = new NamedPipeClientStream(cs.HostNames![0], cs.PipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
+			var namedPipeStream = new NamedPipeClientStream(cs.HostNames![0], cs.PipeName!, PipeDirection.InOut, PipeOptions.Asynchronous);
 			try
 			{
 				using (cancellationToken.Register(() => namedPipeStream.Dispose()))
@@ -1232,14 +1232,14 @@ namespace MySqlConnector.Core
 				}
 			}
 
-			X509Certificate ValidateLocalCertificate(object lcbSender, string lcbTargetHost, X509CertificateCollection lcbLocalCertificates, X509Certificate lcbRemoteCertificate, string[] lcbAcceptableIssuers) => lcbLocalCertificates[0];
+			X509Certificate ValidateLocalCertificate(object lcbSender, string lcbTargetHost, X509CertificateCollection lcbLocalCertificates, X509Certificate? lcbRemoteCertificate, string[] lcbAcceptableIssuers) => lcbLocalCertificates[0];
 
-			bool ValidateRemoteCertificate(object rcbSender, X509Certificate rcbCertificate, X509Chain rcbChain, SslPolicyErrors rcbPolicyErrors)
+			bool ValidateRemoteCertificate(object rcbSender, X509Certificate? rcbCertificate, X509Chain? rcbChain, SslPolicyErrors rcbPolicyErrors)
 			{
 				if (cs.SslMode == MySqlSslMode.Preferred || cs.SslMode == MySqlSslMode.Required)
 					return true;
 
-				if ((rcbPolicyErrors & SslPolicyErrors.RemoteCertificateChainErrors) != 0 && caCertificateChain is object)
+				if ((rcbPolicyErrors & SslPolicyErrors.RemoteCertificateChainErrors) != 0 && caCertificateChain is object && rcbCertificate is object)
 				{
 					if (caCertificateChain.Build((X509Certificate2) rcbCertificate) && caCertificateChain.ChainStatus.Length > 0)
 					{
@@ -1255,8 +1255,8 @@ namespace MySqlConnector.Core
 				return rcbPolicyErrors == SslPolicyErrors.None;
 			}
 
-			var sslStream = clientCertificates is null ? new SslStream(m_stream, false, ValidateRemoteCertificate) :
-				new SslStream(m_stream, false, ValidateRemoteCertificate, ValidateLocalCertificate);
+			var sslStream = clientCertificates is null ? new SslStream(m_stream!, false, ValidateRemoteCertificate) :
+				new SslStream(m_stream!, false, ValidateRemoteCertificate, ValidateLocalCertificate);
 
 			var checkCertificateRevocation = cs.SslMode == MySqlSslMode.VerifyFull;
 

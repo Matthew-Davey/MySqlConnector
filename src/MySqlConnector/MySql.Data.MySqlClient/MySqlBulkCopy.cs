@@ -51,7 +51,7 @@ namespace MySql.Data.MySqlClient
 			WriteToServerAsync(IOBehavior.Synchronous, CancellationToken.None).GetAwaiter().GetResult();
 		}
 
-#if !NETSTANDARD2_1 && !NETCOREAPP3_0
+#if NET45 || NET461 || NET471 || NETSTANDARD1_3 || NETSTANDARD2_0
 		public async Task WriteToServerAsync(DataTable dataTable, CancellationToken cancellationToken = default)
 		{
 			m_valuesEnumerator = DataRowsValuesEnumerator.Create(dataTable ?? throw new ArgumentNullException(nameof(dataTable)));
@@ -70,7 +70,7 @@ namespace MySql.Data.MySqlClient
 			m_valuesEnumerator = new DataRowsValuesEnumerator(dataRows ?? throw new ArgumentNullException(nameof(dataRows)), columnCount);
 			WriteToServerAsync(IOBehavior.Synchronous, CancellationToken.None).GetAwaiter().GetResult();
 		}
-#if !NETSTANDARD2_1 && !NETCOREAPP3_0
+#if NET45 || NET461 || NET471 || NETSTANDARD1_3 || NETSTANDARD2_0
 		public async Task WriteToServerAsync(IEnumerable<DataRow> dataRows, int columnCount, CancellationToken cancellationToken = default)
 		{
 			m_valuesEnumerator = new DataRowsValuesEnumerator(dataRows ?? throw new ArgumentNullException(nameof(dataRows)), columnCount);
@@ -90,7 +90,7 @@ namespace MySql.Data.MySqlClient
 			m_valuesEnumerator = DataReaderValuesEnumerator.Create(dataReader ?? throw new ArgumentNullException(nameof(dataReader)));
 			WriteToServerAsync(IOBehavior.Synchronous, CancellationToken.None).GetAwaiter().GetResult();
 		}
-#if !NETSTANDARD2_1 && !NETCOREAPP3_0
+#if NET45 || NET461 || NET471 || NETSTANDARD1_3 || NETSTANDARD2_0
 		public async Task WriteToServerAsync(IDataReader dataReader, CancellationToken cancellationToken = default)
 		{
 			m_valuesEnumerator = DataReaderValuesEnumerator.Create(dataReader ?? throw new ArgumentNullException(nameof(dataReader)));
@@ -104,7 +104,7 @@ namespace MySql.Data.MySqlClient
 		}
 #endif
 
-#if !NETSTANDARD2_1 && !NETCOREAPP3_0
+#if NET45 || NET461 || NET471 || NETSTANDARD1_3 || NETSTANDARD2_0
 		private async ValueTask<int> WriteToServerAsync(IOBehavior ioBehavior, CancellationToken cancellationToken)
 #else
 		private async ValueTask WriteToServerAsync(IOBehavior ioBehavior, CancellationToken cancellationToken)
@@ -171,7 +171,7 @@ namespace MySql.Data.MySqlClient
 			if (closeConnection)
 				m_connection.Close();
 
-#if !NETSTANDARD2_1 && !NETCOREAPP3_0
+#if NET45 || NET461 || NET471 || NETSTANDARD1_3 || NETSTANDARD2_0
 			return default;
 #endif
 
