@@ -21,7 +21,7 @@ namespace MySqlConnector.Core
 				IsolationLevel.ReadCommitted => "read committed",
 				IsolationLevel.ReadUncommitted => "read uncommitted",
 				IsolationLevel.RepeatableRead => "repeatable read",
-				IsolationLevel.Snapshot => throw new NotSupportedException("IsolationLevel.{0} is not supported.".FormatInvariant(Transaction.IsolationLevel)),
+				IsolationLevel.Snapshot => "repeatable read",
 				IsolationLevel.Chaos => throw new NotSupportedException("IsolationLevel.{0} is not supported.".FormatInvariant(Transaction.IsolationLevel)),
 
 				// "In terms of the SQL:1992 transaction isolation levels, the default InnoDB level is REPEATABLE READ." - http://dev.mysql.com/doc/refman/5.7/en/innodb-transaction-model.html
@@ -29,7 +29,11 @@ namespace MySqlConnector.Core
 				_ => "repeatable read",
 			};
 
-			using var cmd = new MySqlCommand("set transaction isolation level " + isolationLevel + "; start transaction;", Connection);
+			using var cmd = new MySqlCommand($"set session transaction isolation level {isolationLevel};", Connection);
+			cmd.ExecuteNonQuery();
+
+			var consistentSnapshotText = Transaction.IsolationLevel == IsolationLevel.Snapshot ? " with consistent snapshot" : "";
+			cmd.CommandText = $"start transaction{consistentSnapshotText};";
 			cmd.ExecuteNonQuery();
 		}
 

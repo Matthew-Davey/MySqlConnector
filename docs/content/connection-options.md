@@ -1,5 +1,5 @@
 ---
-lastmod: 2019-11-27
+lastmod: 2020-04-04
 date: 2016-10-16
 title: Connection Options
 customtitle: MySQL Connection String for C# .NET Core Programs
@@ -133,6 +133,11 @@ These are the options that need to be used in order to configure a connection to
     <td></td>
     <td>Specifies which certificate should be used from the Certificate Store specified in the setting above. This option must be used to indicate which certificate in the store should be used for authentication.</td>
   </tr>
+  <tr>
+    <td>Tls Version, TlsVersion, Tls-Version</td>
+    <td></td>
+    <td>Specifies which TLS versions may be used during TLS negotiation. The default value of <code>null</code> allows the OS to determine the TLS version to use (see <a href="https://docs.microsoft.com/en-us/dotnet/framework/network-programming/tls" title="Transport Layer Security (TLS) best practices with the .NET Framework">documentation</a>); this is the recommended setting. Otherwise, to restrict the versions that can be used, specify a comma-delimited list of versions taken from the following: <code>TLS 1.0</code>, <code>TLS 1.1.</code>, <code>TLS 1.2</code>, <code>TLS 1.3</code>. (This option allows each version to be specified in a few different formats: <code>Tls12</code>, <code> Tlsv1.2</code>, <code>TLS 1.2</code>, <code>Tls v1.2</code>; they are treated equivalently.)</td>
+  </tr>
 </table>
 
 Connection Pooling Options
@@ -149,12 +154,12 @@ Connection pooling is enabled by default. These options are used to configure it
   <tr>
     <td>Pooling</td>
     <td>true</td>
-    <td>Enables connection pooling. When pooling is enabled, <code>MySqlConnection.Open</code>/<code>OpenAsync</code> retrieves an open connection from the pool if one is available, and <code>Close</code>/<code>Dispose</code> returns the open connection to the pool. If there are no available connections in the pool, and the pool hasn’t reached <code>MaximumPoolSize</code> connections, a new connection will be opened; otherwise, the call to <code>Open</code>/<code>OpenAsync</code> blocks until a connection becomes available or <code>ConnectionTimeout</code> is reached.</td>
+    <td>Enables connection pooling. When pooling is enabled, <code>MySqlConnection.Open</code>/<code>OpenAsync</code> retrieves an open connection from the pool if one is available, and <code>Close</code>/<code>Dispose</code>/<code>DisposeAsync</code> returns the open connection to the pool. If there are no available connections in the pool, and the pool hasn’t reached <code>MaximumPoolSize</code> connections, a new connection will be opened; otherwise, the call to <code>Open</code>/<code>OpenAsync</code> blocks until a connection becomes available or <code>ConnectionTimeout</code> is reached.</td>
   </tr>
   <tr>
     <td>Connection Lifetime, ConnectionLifeTime</td>
     <td>0</td>
-    <td>Controls the maximum length of time a connection to the server can be open. Connections that are returned to the pool are destroyed if it’s been more than <code>ConnectionLifeTime</code> seconds since the connection was created. The default value of zero (0) means pooled connections will never incur a ConnectionLifeTime timeout.</td>
+    <td>Connections that are returned to the pool will be closed if it’s been more than <code>ConnectionLifeTime</code> seconds since the connection was created. The default value of zero (0) means pooled connections will never incur a <code>ConnectionLifeTime</code> timeout. This can be useful when multiple database servers are being used, as it will force existing connections to be closed, which may spread load more evenly.</td>
   </tr>
   <tr>
     <td>Connection Reset, ConnectionReset</td>
@@ -408,6 +413,11 @@ from your connection string when migrating from Connector/NET to MySqlConnector.
     <td>MySqlConnector always allows batch statements.</td>
   </tr>
   <tr>
+    <td>CacheServerProperties, Cache Server Properties</td>
+    <td></td>
+    <td>MySqlConnector doesn’t need this optimization.</td>
+  </tr>
+  <tr>
     <td>CheckParameters, Check Parameters</td>
     <td>true</td>
     <td>MySqlConnector always checks stored procedure parameters efficiently; there’s no need to disable this.</td>
@@ -416,6 +426,11 @@ from your connection string when migrating from Connector/NET to MySqlConnector.
     <td>CommandInterceptors, Command Interceptors</td>
     <td></td>
     <td>MySqlConnector doesn’t support this extensibility mechanism, which is not compatible with async operations.</td>
+  </tr>
+  <tr>
+    <td>DnsSrv, Dns-Srv</td>
+    <td></td>
+    <td>MySqlConnector doesn’t support discovering server addresses from DNS SRV records.</td>
   </tr>
   <tr>
     <td>ExceptionInterceptors, Exception Interceptors</td>
@@ -453,6 +468,11 @@ from your connection string when migrating from Connector/NET to MySqlConnector.
     <td>MySqlConnector places no limit on the amount of stored procedure metadata that is cached. It takes a very small amount of memory.</td>
   </tr>
   <tr>
+    <td>Replication</td>
+    <td></td>
+    <td>Not supported.</td>
+  </tr>
+  <tr>
     <td>RespectBinaryFlags, Respect Binary Flags</td>
     <td>true</td>
     <td>The binary type of a column is always respected.</td>
@@ -461,6 +481,11 @@ from your connection string when migrating from Connector/NET to MySqlConnector.
     <td>SharedMemoryName, Shared Memory Name</td>
     <td>true</td>
     <td>Shared memory (on Windows) is not supported as a connection protocol.</td>
+  </tr>
+  <tr>
+    <td>SshHostName, SshPort, SshUserName, SshPassword, SshKeyFile, SshPassPhrase</td>
+    <td></td>
+    <td>Connecting via SSH isn’t built into MySqlConnector, but can be set up easily by following <a href="tutorials/connect-ssh/" title="Connecting to MySQL Server with SSH from C#">these instructions</a>.</td>
   </tr>
   <tr>
     <td>SqlServerMode, Sql Server Mode</td>

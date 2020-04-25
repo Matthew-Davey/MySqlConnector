@@ -1,5 +1,7 @@
 using System;
+using System.Data;
 using System.Data.Common;
+using System.Linq;
 using System.Threading.Tasks;
 using Dapper;
 using MySql.Data.MySqlClient;
@@ -50,7 +52,54 @@ namespace SideBySide
 			Assert.Equal(new[] { 1, 2 }, results);
 		}
 
+		[Theory]
+		[InlineData(IsolationLevel.ReadUncommitted, "read uncommitted")]
+		[InlineData(IsolationLevel.ReadCommitted, "read committed")]
+		[InlineData(IsolationLevel.RepeatableRead, "repeatable read")]
+		[InlineData(IsolationLevel.Serializable, "serializable")]
+		[InlineData(IsolationLevel.Unspecified, "repeatable read")]
 #if !BASELINE
+		[InlineData(IsolationLevel.Snapshot, "repeatable read")]
+#endif
+		public void DbConnectionIsolationLevel(IsolationLevel inputIsolationLevel, string expectedTransactionIsolationLevel)
+		{
+			DbConnection connection = m_connection;
+			connection.Execute(@"set global log_output = 'table';");
+			connection.Execute(@"set global general_log = 1;");
+			using (var trans = connection.BeginTransaction(inputIsolationLevel))
+				trans.Commit();
+
+			connection.Execute(@"set global general_log = 0;");
+
+			// we could use @tx_isolation (in MySQL 5.6/5.7) and @transaction_isolation (in MySQL 5.7/8.0), but would require a different query for different server versions
+			var results = connection.Query<string>($"select convert(argument USING utf8) from mysql.general_log where thread_id = @ServerThread and convert(argument using utf8) like '%isolation level%' and argument not like 'select%' order by event_time;", new { m_connection.ServerThread });
+			var lastIsolationLevelQuery = results.Last();
+
+			Assert.Contains(expectedTransactionIsolationLevel.ToLower(), lastIsolationLevelQuery.ToLower());
+		}
+
+#if !BASELINE
+		[Theory]
+		[InlineData(IsolationLevel.ReadUncommitted, "start transaction")]
+		[InlineData(IsolationLevel.ReadCommitted, "start transaction")]
+		[InlineData(IsolationLevel.RepeatableRead, "start transaction")]
+		[InlineData(IsolationLevel.Serializable, "start transaction")]
+		[InlineData(IsolationLevel.Unspecified, "start transaction")]
+		[InlineData(IsolationLevel.Snapshot, "start transaction with consistent snapshot")]
+		public void DbConnectionTransactionCommand(IsolationLevel inputIsolationLevel, string expectedTransactionIsolationLevel)
+		{
+			DbConnection connection = m_connection;
+			connection.Execute(@"set global log_output = 'table';");
+			connection.Execute(@"set global general_log = 1;");
+			using (var trans = connection.BeginTransaction(inputIsolationLevel))
+				trans.Commit();
+
+			var results = connection.Query<string>($"select convert(argument USING utf8) from mysql.general_log where thread_id = @ServerThread and convert(argument using utf8) like 'start transaction%' order by event_time;", new { m_connection.ServerThread });
+			var lastStartTransactionQuery = results.Last();
+
+			Assert.Contains(expectedTransactionIsolationLevel.ToLower(), lastStartTransactionQuery.ToLower());
+		}
+
 		[Fact]
 		public async Task CommitAsync()
 		{
@@ -210,7 +259,7 @@ namespace SideBySide
 			}
 			catch (MySqlException ex)
 			{
-				Assert.Equal(MySqlErrorCode.StoredProcedureDoesNotExist, (MySqlErrorCode) ex.Number);
+				Assert.Equal(MySqlErrorCode.StoredProcedureDoesNotExist, (MySqlErrorCode)ex.Number);
 			}
 		}
 
@@ -225,7 +274,7 @@ namespace SideBySide
 			}
 			catch (MySqlException ex)
 			{
-				Assert.Equal(MySqlErrorCode.StoredProcedureDoesNotExist, (MySqlErrorCode) ex.Number);
+				Assert.Equal(MySqlErrorCode.StoredProcedureDoesNotExist, (MySqlErrorCode)ex.Number);
 			}
 		}
 
@@ -242,7 +291,7 @@ namespace SideBySide
 			}
 			catch (MySqlException ex)
 			{
-				Assert.Equal(MySqlErrorCode.StoredProcedureDoesNotExist, (MySqlErrorCode) ex.Number);
+				Assert.Equal(MySqlErrorCode.StoredProcedureDoesNotExist, (MySqlErrorCode)ex.Number);
 			}
 		}
 

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Globalization;
+using System.Text.RegularExpressions;
 using MySqlConnector.Utilities;
 
 namespace MySql.Data.MySqlClient
@@ -120,6 +121,12 @@ namespace MySql.Data.MySqlClient
 		{
 			get => MySqlConnectionStringOption.CertificateThumbprint.GetValue(this);
 			set => MySqlConnectionStringOption.CertificateThumbprint.SetValue(this, value);
+		}
+
+		public string? TlsVersion
+		{
+			get => MySqlConnectionStringOption.TlsVersion.GetValue(this);
+			set => MySqlConnectionStringOption.TlsVersion.SetValue(this, value);
 		}
 
 		// Connection Pooling Options
@@ -342,8 +349,17 @@ namespace MySql.Data.MySqlClient
 		public override object? this[string key]
 		{
 			get => MySqlConnectionStringOption.GetOptionForKey(key).GetObject(this);
-			set => base[MySqlConnectionStringOption.GetOptionForKey(key).Key] = value;
+			set
+			{
+				var option = MySqlConnectionStringOption.GetOptionForKey(key);
+				if (value is null)
+					base[option.Key] = null;
+				else
+					option.SetObject(this, value);
+			}
 		}
+
+		internal void DoSetValue(string key, object? value) => base[key] = value;
 
 		internal string GetConnectionString(bool includePassword)
 		{
@@ -390,6 +406,7 @@ namespace MySql.Data.MySqlClient
 		public static readonly MySqlConnectionStringReferenceOption<string> SslCa;
 		public static readonly MySqlConnectionStringReferenceOption<string> SslCert;
 		public static readonly MySqlConnectionStringReferenceOption<string> SslKey;
+		public static readonly MySqlConnectionStringReferenceOption<string> TlsVersion;
 
 		// Connection Pooling Options
 		public static readonly MySqlConnectionStringValueOption<bool> Pooling;
@@ -438,6 +455,7 @@ namespace MySql.Data.MySqlClient
 		public IReadOnlyList<string> Keys => m_keys;
 
 		public abstract object? GetObject(MySqlConnectionStringBuilder builder);
+		public abstract void SetObject(MySqlConnectionStringBuilder builder, object value);
 
 		protected MySqlConnectionStringOption(IReadOnlyList<string> keys)
 		{
@@ -519,6 +537,44 @@ namespace MySql.Data.MySqlClient
 			AddOption(CertificateThumbprint = new MySqlConnectionStringReferenceOption<string>(
 				keys: new[] { "CertificateThumbprint", "Certificate Thumbprint", "Certificate Thumb Print" },
 				defaultValue: null));
+
+			AddOption(TlsVersion = new MySqlConnectionStringReferenceOption<string>(
+				keys: new[] { "TlsVersion", "Tls Version", "Tls-Version" },
+				defaultValue: null,
+				coerce: value =>
+				{
+					if (string.IsNullOrWhiteSpace(value))
+						return null;
+
+					Span<bool> versions = stackalloc bool[4];
+					foreach (var part in value!.TrimStart('[', '(').TrimEnd(')', ']').Split(','))
+					{
+						var match = Regex.Match(part, @"\s*TLS( ?v?(1|1\.?0|1\.?1|1\.?2|1\.?3))?$", RegexOptions.IgnoreCase);
+						if (!match.Success)
+							throw new ArgumentException($"Unrecognized TlsVersion protocol version '{part}'; permitted versions are: TLS 1.0, TLS 1.1, TLS 1.2, TLS 1.3.");
+						var version = match.Groups[2].Value;
+						if (version == "" || version == "1" || version == "10" || version == "1.0")
+							versions[0] = true;
+						else if (version == "11" || version == "1.1")
+							versions[1] = true;
+						else if (version == "12" || version == "1.2")
+							versions[2] = true;
+						else if (version == "13" || version == "1.3")
+							versions[3] = true;
+					}
+
+					var coercedValue = "";
+					for (var i = 0; i < versions.Length; i++)
+					{
+						if (versions[i])
+						{
+							if (coercedValue.Length != 0)
+								coercedValue += ", ";
+							coercedValue += "TLS 1.{0}".FormatInvariant(i);
+						}
+					}
+					return coercedValue;
+				}));
 
 			// Connection Pooling Options
 			AddOption(Pooling = new MySqlConnectionStringValueOption<bool>(
@@ -674,9 +730,11 @@ namespace MySql.Data.MySqlClient
 			builder.TryGetValue(Key, out var objectValue) ? ChangeType(objectValue) : m_defaultValue;
 
 		public void SetValue(MySqlConnectionStringBuilder builder, T value) =>
-			builder[Key] = m_coerce is null ? value : m_coerce(value);
+			builder.DoSetValue(Key, m_coerce is null ? value : m_coerce(value));
 
 		public override object GetObject(MySqlConnectionStringBuilder builder) => GetValue(builder);
+
+		public override void SetObject(MySqlConnectionStringBuilder builder, object value) => SetValue(builder, ChangeType(value));
 
 		private T ChangeType(object objectValue)
 		{
@@ -694,9 +752,9 @@ namespace MySql.Data.MySqlClient
 				{
 					return (T) Enum.Parse(typeof(T), enumString, ignoreCase: true);
 				}
-				catch (Exception ex)
+				catch (Exception ex) when (!(ex is ArgumentException))
 				{
-					throw new InvalidOperationException("Value '{0}' not supported for option '{1}'.".FormatInvariant(objectValue, typeof(T).Name), ex);
+					throw new ArgumentException("Value '{0}' not supported for option '{1}'.".FormatInvariant(objectValue, typeof(T).Name), ex);
 				}
 			}
 
@@ -728,9 +786,11 @@ namespace MySql.Data.MySqlClient
 			builder.TryGetValue(Key, out var objectValue) ? ChangeType(objectValue) : m_defaultValue;
 
 		public void SetValue(MySqlConnectionStringBuilder builder, T? value) =>
-			builder[Key] = m_coerce is null ? value : m_coerce(value);
+			builder.DoSetValue(Key, m_coerce is null ? value : m_coerce(value));
 
 		public override object? GetObject(MySqlConnectionStringBuilder builder) => GetValue(builder);
+
+		public override void SetObject(MySqlConnectionStringBuilder builder, object value) => SetValue(builder, ChangeType(value));
 
 		private static T ChangeType(object objectValue) =>
 			(T) Convert.ChangeType(objectValue, typeof(T), CultureInfo.InvariantCulture);
@@ -742,7 +802,7 @@ namespace MySql.Data.MySqlClient
 	internal sealed class MySqlConnectionStringReferenceOption<T> : MySqlConnectionStringOption
 		where T : class
 	{
-		public MySqlConnectionStringReferenceOption(IReadOnlyList<string> keys, T? defaultValue, Func<T?, T>? coerce = null)
+		public MySqlConnectionStringReferenceOption(IReadOnlyList<string> keys, T? defaultValue, Func<T?, T?>? coerce = null)
 			: base(keys)
 		{
 			m_defaultValue = defaultValue;
@@ -753,9 +813,11 @@ namespace MySql.Data.MySqlClient
 			builder.TryGetValue(Key, out var objectValue) ? ChangeType(objectValue) : m_defaultValue;
 
 		public void SetValue(MySqlConnectionStringBuilder builder, T? value) =>
-			builder[Key] = m_coerce is null ? value : m_coerce(value);
+			builder.DoSetValue(Key, m_coerce is null ? value : m_coerce(value));
 
 		public override object? GetObject(MySqlConnectionStringBuilder builder) => GetValue(builder);
+
+		public override void SetObject(MySqlConnectionStringBuilder builder, object value) => SetValue(builder, ChangeType(value));
 
 		private static T ChangeType(object objectValue) =>
 			(T) Convert.ChangeType(objectValue, typeof(T), CultureInfo.InvariantCulture);
