@@ -5,7 +5,7 @@ using System.Data.Common;
 using System.Runtime.Serialization;
 #endif
 
-namespace MySql.Data.MySqlClient
+namespace MySqlConnector
 {
 #if !NETSTANDARD1_3
 	[Serializable]
